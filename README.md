@@ -45,6 +45,18 @@ Real-world shocks the forecast is **not** told about: January churn spikes, a US
 
 > 💡 **Over 6 months, a simple run-rate is as good or better. Over 24 months, the cohort model is far more accurate**, because a run-rate can't see that young cohorts churn fast and older cohorts stabilize.
 
+## Excel version (live formulas)
+
+`subscription_forecast_excel_model.xlsx` rebuilds the same forecast in Excel with **975 formulas and no hardcoded results**:
+
+- **Inputs:** every driver in its own cell (trial growth, conversion, churn curve `a` and `b`, renewal, ARPU, currency mix) plus an **FX scenario drop-down** (Base / USD +10% / USD -10%)
+- **Churn Curve:** churn and survival by tenure, driven by the two curve inputs
+- **Cohort Waterfall:** 24 monthly cohorts x 24 months for each plan
+- **Forecast:** trials → new payers → active subscribers → net revenue, monthly for 2026-27
+- **Summary:** FY totals, FX impact, and a **check against the Python model (0.0% difference)**
+
+Change any blue input and the whole model recalculates. Build it with `python build_excel.py`.
+
 ## Outputs
 
 `subscription_revenue_model.xlsx`: Summary, Monthly Revenue, Cohort Retention, Churn Curve, Trial Conversion, Platform Mix, Backtest 6mo, Backtest 24mo, Forecast 2026-27, Forecast Assumptions, FX Scenarios, Currency Mix, Backtest Robustness.
@@ -65,6 +77,7 @@ Tests cover conversion by platform, a declining churn curve, monotonic cohort re
 subrev/data.py       # simulated business: assumptions, subscribers, FX, monthly revenue
 subrev/analysis.py   # cohorts, churn curve, conversion, mix, forecast, backtest, FX
 run.py               # builds everything and writes the Excel workbook
+build_excel.py       # formula-driven Excel forecast model
 tests/test_model.py  # 7 tests
 ```
 

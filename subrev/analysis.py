@@ -86,6 +86,18 @@ def _signup_forecast(subs, fit_end, horizon):
     return pd.Series(trend, index=fut), float(np.exp(b) - 1)
 
 
+def _signup_params(subs, fit_end):
+    """Trend value for month fit_end+1 (no seasonality), growth, December factor."""
+    s = subs[subs.signup_idx <= fit_end].groupby("signup_idx").size()
+    idx = s.index.to_numpy()
+    last12 = idx[idx > fit_end - 12]
+    nondec = last12[(last12 % 12) != 11]
+    b, a = np.polyfit(nondec, np.log(s.loc[nondec]), 1)
+    decs = idx[(idx % 12) == 11]
+    dec_factor = float(np.mean([s.loc[d] / np.exp(a + b * d) for d in decs])) if len(decs) else 1.0
+    return float(np.exp(a + b * (fit_end + 1))), float(np.exp(b) - 1), dec_factor
+
+
 def forecast(subs, fx, fit_end, horizon):
     """Cohort-based forecast of active subscribers and net revenue (USD at the
     FX rates of month fit_end, i.e. constant currency).
@@ -130,6 +142,7 @@ def forecast(subs, fx, fit_end, horizon):
         pa = paid[paid.annual]
         crossed = ((M - pa.paid_start) // 12 - (fit_end - pa.paid_start) // 12).to_numpy()
         ann = float((renew ** crossed).sum())
+        base_mon, base_ann = mon, ann
         # new cohorts: trial in month s -> paid from s+1
         for s_idx, k in signups.items():
             p = s_idx + 1
@@ -138,10 +151,14 @@ def forecast(subs, fx, fit_end, horizon):
                 mon += newpaid * (1 - ann_share) * surv_cum[M - p]
                 ann += newpaid * ann_share * renew ** ((M - p) // 12)
         rows.append({"month_idx": M, "month": str(months(1)[0] + M),
+                     "existing_monthly": base_mon, "existing_annual": base_ann,
                      "fc_active_monthly": mon, "fc_active_annual": ann,
                      "fc_active_subs": mon + ann,
                      "fc_net_revenue_usd": mon * arpu_m + ann * arpu_a})
-    params = {"fit_end": str(months(fit_end + 1)[fit_end]), "hazard_a": a, "hazard_b": b,
+    sig_a, sig_g, dec_f = _signup_params(obs, fit_end)
+    params = {"signups_trend_next": sig_a, "dec_factor": dec_f,
+              "trials_in_fit_end": int((obs.signup_idx == fit_end).sum()),
+              "fit_end": str(months(fit_end + 1)[fit_end]), "hazard_a": a, "hazard_b": b,
               "annual_renewal": renew, "trial_conversion": conv, "annual_share": ann_share,
               "signup_growth_mom": growth, "arpu_monthly_usd": arpu_m,
               "arpu_annual_usd": arpu_a, "active_at_fit_end": int(last.active_subs)}
