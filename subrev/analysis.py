@@ -214,3 +214,36 @@ def fx_scenarios(fc_total, ccy_mix, shocks=(-0.10, 0.0, 0.10)):
     return pd.DataFrame([{"scenario": f"Non-USD currencies {s:+.0%} vs USD",
                           "fy_revenue_usd": fc_total * (1 + s * non_usd),
                           "impact_usd": fc_total * s * non_usd} for s in shocks])
+
+
+# ---------- customer lifetime value -----------------------------------------
+def expected_paid_months(a, b, horizon=36):
+    """Expected paid months in the first `horizon` months for a new monthly subscriber,
+    from the fitted churn curve churn(t) = a * t ** b (the first paid month always counts)."""
+    alive, total = 1.0, 0.0
+    for t in range(horizon):
+        total += alive
+        alive *= 1 - min(a * (t + 1) ** b, 1.0)
+    return total
+
+
+def clv_by_platform(subs, fx, n, a, b, horizon=36):
+    """Monthly-plan customer lifetime value by platform, and value per trial start.
+
+    CLV = net ARPU (after app-store or payment fees, constant currency) x expected paid months.
+    Value per trial = trial-to-paid conversion x CLV, the most the business could spend to
+    acquire one trial start and still break even on the monthly plan (a ceiling for acquisition cost)."""
+    end = n - 1
+    paid = subs[subs.converted & ~subs.annual & (subs.paid_start <= end) & (subs.end_idx > end)]
+    rate = paid.currency.map(fx.iloc[end]).to_numpy()
+    price = paid.monthly_price.to_numpy() + np.where(
+        (paid.region.to_numpy() == "US") & (end >= PRICE_UP_IDX), PRICE_UP_USD, 0.0)
+    net = pd.Series(price * (1 - paid.fee_rate.to_numpy()) * rate, index=paid.index)
+    arpu = net.groupby(paid.platform).mean()
+    months_ = expected_paid_months(a, b, horizon)
+    conv = conversion_by_platform(subs, n).conversion
+    out = pd.DataFrame({"net_arpu_usd": arpu, "expected_paid_months": months_,
+                        "trial_conversion": conv})
+    out["clv_usd"] = out.net_arpu_usd * out.expected_paid_months
+    out["value_per_trial_usd"] = out.trial_conversion * out.clv_usd
+    return out

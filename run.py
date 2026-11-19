@@ -15,6 +15,7 @@ mix = A.platform_mix(subs, fx, n)
 bt, bt_stats = A.backtest(subs, fx, fit_end=n - 7, horizon=6)
 bt24, bt24_stats = A.backtest(subs, fx, fit_end=n - 25, horizon=24)
 fc, params = A.forecast(subs, fx, fit_end=n - 1, horizon=24)
+clv = A.clv_by_platform(subs, fx, n, a, b)
 fy26 = fc[fc.month.str.startswith("2026")].fc_net_revenue_usd.sum()
 fy27 = fc[fc.month.str.startswith("2027")].fc_net_revenue_usd.sum()
 bridge = A.fx_bridge(subs, fx, n)
@@ -51,7 +52,7 @@ summary = {
 for k, v in summary.items():
     print(f"{k:55s} {v:,.4f}" if isinstance(v, float) else f"{k:55s} {v:,}")
 print("hazard fit a=%.3f b=%.3f" % (a, b))
-print(conv); print(mix); print(scen); 
+print(conv); print(mix); print(scen); print(clv.round(2))
 
 # robustness: the same backtests on 10 independent simulations
 import numpy as np
@@ -73,6 +74,7 @@ with pd.ExcelWriter("subscription_revenue_model.xlsx") as w:
     ret.to_excel(w, sheet_name="Cohort Retention")
     curve.to_excel(w, sheet_name="Churn Curve", index=False)
     conv.to_excel(w, sheet_name="Trial Conversion")
+    clv.to_excel(w, sheet_name="CLV by Platform")
     mix.to_excel(w, sheet_name="Platform Mix")
     bt.to_excel(w, sheet_name="Backtest 6mo", index=False)
     bt24.to_excel(w, sheet_name="Backtest 24mo", index=False)

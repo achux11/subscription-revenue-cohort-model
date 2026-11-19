@@ -57,3 +57,13 @@ def test_fx_scenarios_scale_with_non_usd_share():
     import pandas as pd
     s = A.fx_scenarios(100.0, pd.Series({"USD": 0.6, "EUR": 0.4}))
     assert s.impact_usd.round(6).tolist() == [-4.0, 0.0, 4.0]
+
+
+def test_clv_by_platform_is_consistent(world):
+    subs, fx = world
+    a, b = A.fit_hazard(A.churn_curve(subs, N_MONTHS, max_tenure=18))
+    assert 1 < A.expected_paid_months(a, b, 36) <= 36
+    assert A.expected_paid_months(a, b, 12) < A.expected_paid_months(a, b, 36)
+    clv = A.clv_by_platform(subs, fx, N_MONTHS, a, b)
+    assert (clv.clv_usd > 0).all()
+    assert (clv.value_per_trial_usd - clv.trial_conversion * clv.clv_usd).abs().max() < 1e-9

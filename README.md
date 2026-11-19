@@ -36,6 +36,22 @@ Real-world shocks the forecast is **not** told about: January churn spikes, a US
 | FY2026 / FY2027 forecast (constant currency) | **$4.28M / $5.20M** |
 | FY2026 if non-USD currencies move ±10% vs. USD | **±$201K** (47% of revenue is non-USD) |
 
+### Customer lifetime value by platform (monthly plan)
+
+CLV = net ARPU after app-store or payment fees (constant currency) x expected paid months over 36 months, from the
+fitted churn curve (11.8 months). Value per trial = trial-to-paid conversion x CLV: the most the business could spend
+to acquire one trial start and still break even, a ceiling for customer acquisition cost.
+
+| Platform | Net ARPU / month | 36-month CLV | Trial conversion | Value per trial (max break-even CAC) |
+|---|---|---|---|---|
+| Web | $9.04 | $106.70 | 41.9% | **$44.69** |
+| iOS | $7.90 | $93.20 | 35.1% | $32.73 |
+| Android | $7.90 | $93.28 | 29.8% | $27.80 |
+
+> A web trial is worth about **61% more** than an Android trial ($44.69 vs. $27.80): web users convert more often and the
+> business keeps more of each payment because there is no app-store fee. Acquisition spend can be higher on web before it
+> stops paying back. Annual-plan customers are left out of this view.
+
 ### Forecast accuracy (revenue MAPE, 10 independent simulations)
 
 | Horizon | Cohort model (median) | Naive run-rate (median) | Cohort model wins |
